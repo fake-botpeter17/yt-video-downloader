@@ -1,18 +1,8 @@
-import yt_dlp
+"""Development entry point."""
 
-url = "https://youtu.be/9FddJ-Gwzmo?si=E-xuXHJMkVQY3YDo"
+from backend.app import create_app
 
-ydl_opts = {
-    "format": "137+140",  # 1080p video + audio
-}
+app = create_app()
 
-with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-    info = ydl.download([url])
-
-# for fmt in info["formats"]:
-#     print(
-#         f"ID: {fmt.get('format_id'):<5} "
-#         f"Resolution: {fmt.get('resolution', 'N/A'):<10} "
-#         f"Ext: {fmt.get('ext'):<5} "
-#         f"FPS: {fmt.get('fps', 'N/A')}"
-#     )
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)

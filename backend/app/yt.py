@@ -1,28 +1,23 @@
-from flask import Blueprint, request
-from yt_dlp import YoutubeDL
+"""Backward-compatible blueprint wrapper for legacy imports."""
 
-yt_bp = Blueprint(__name__, "yt_bp", url_prefix="/yt")
+from __future__ import annotations
+
+from flask import Blueprint, jsonify, request
+
+from backend.app.services.youtube_service import extract_info
+from backend.app.utils.rate_limit import rate_limit
+
+yt_bp = Blueprint("yt_bp", __name__, url_prefix="/yt")
 
 
-@yt_bp.route("/get-formats")
+@yt_bp.post("/get-formats")
+@rate_limit(20, 60)
 def get_video_formats():
-    url = request.get_json().get("url")
-
-    with YoutubeDL({"quiet": True}) as ydl:
-        info = ydl.extract_info(url, download=False)
-
-        formats = [
-            {
-                "id": f["format_id"],
-                "ext": f.get("ext"),
-                "height": f.get("height"),
-                "fps": f.get("fps"),
-            }
-            for f in info["formats"]
-        ]
-
-        return formats
-
-
-def get_video_download_link():
-    
+    """Return formats using the historical /yt/get-formats route."""
+    try:
+        info = extract_info((request.get_json(silent=True) or {}).get("url"))
+        return jsonify(info["formats"])
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception:
+        return jsonify({"error": "Could not fetch formats."}), 502
