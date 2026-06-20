@@ -83,7 +83,7 @@ def _run_download(
                 }
             )
         elif event.get("status") == "finished":
-            task.update({"phase": "Merging and preparing file", "progress": 96})
+            task.update({"phase": "Preparing file...", "progress": 96})
 
     try:
         selector = (
@@ -130,7 +130,7 @@ def _run_download(
         task.update(
             {
                 "status": "ready",
-                "phase": "Ready",
+                "phase": "Starting download...",
                 "progress": 100,
                 "file": str(final),
                 "filename": filename,
