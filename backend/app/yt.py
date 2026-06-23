@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 
 from backend.app.services.youtube_service import extract_info
 from backend.app.utils.rate_limit import rate_limit
@@ -14,6 +14,10 @@ yt_bp = Blueprint("yt_bp", __name__, url_prefix="/yt")
 @rate_limit(20, 60)
 def get_video_formats():
     """Return formats using the historical /yt/get-formats route."""
+
+    if current_app.config.get("verbose", False):
+        print("getting available formats ")
+
     try:
         info = extract_info((request.get_json(silent=True) or {}).get("url"))
         return jsonify(info["formats"])

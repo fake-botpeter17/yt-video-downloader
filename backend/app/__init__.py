@@ -17,6 +17,7 @@ from backend.app.utils.rate_limit import rate_limit
 def create_app() -> Flask:
     app = Flask(__name__)
     app.config["MAX_CONTENT_LENGTH"] = 16 * 1024
+    app.config["verbose"] = False
 
     @app.after_request
     def add_headers(response):
@@ -27,16 +28,25 @@ def create_app() -> Flask:
 
     @app.route("/<path:_>", methods=["OPTIONS"])
     def options(_):
+        if app.config.get("verbose", False):
+            print("Invalid Request!! ")
         return "", 204
 
     @app.post("/video/info")
     @rate_limit(20, 60)
     def video_info():
         try:
+            url = (request.get_json(silent=True) or {}).get("url")
+            if app.config.get("verbose", False):
+                print(f"getting video info for video id: {url}")
+
             return jsonify(
-                extract_info((request.get_json(silent=True) or {}).get("url"))
+                extract_info(url)
             )
+        
         except ValueError as exc:
+            if app.config.get("verbose", False):
+                print(f"Erorr occured while fetching video info. \n\nVideo ID: {url}")
             return jsonify({"error": str(exc)}), 400
         except Exception:
             return (
@@ -73,6 +83,8 @@ def create_app() -> Flask:
     @rate_limit(10, 60)
     def server_download():
         payload = request.get_json(silent=True) or {}
+        if app.config.get("verbose", False):
+            print(f"starting server download with payload\n {payload}")
         try:
             task_id = create_download(
                 payload.get("url"),
@@ -87,6 +99,8 @@ def create_app() -> Flask:
     @app.get("/download/status/<task_id>")
     def download_status(task_id: str):
         status = get_status(task_id)
+        if app.config.get("verbose", False):
+            print(f"Checking status of {task_id} : {status}")
         return (
             (jsonify(status), 200)
             if status
@@ -96,6 +110,8 @@ def create_app() -> Flask:
     @app.get("/download/file/<task_id>")
     def download_file(task_id: str):
         result = get_file(task_id)
+        if app.config.get("verbose", False):
+            print(f"Downloading file {task_id}")
         if not result:
             return jsonify({"error": "File is not ready."}), 404
         path, filename = result
