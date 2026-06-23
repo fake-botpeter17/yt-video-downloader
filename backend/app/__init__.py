@@ -92,8 +92,14 @@ def create_app() -> Flask:
                 payload.get("download_type", "video"),
                 payload.get("audio_format", "original"),
             )
+
+            if app.config.get("verbose", False):
+                print(f"created task id: {task_id}")
+            
             return jsonify({"download_id": task_id})
         except ValueError as exc:
+            if app.config.get("verbose", False):
+                print("error creating task id")
             return jsonify({"error": str(exc)}), 400
 
     @app.get("/download/status/<task_id>")
