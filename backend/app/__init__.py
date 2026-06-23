@@ -25,11 +25,11 @@ def create_app() -> Flask:
         response.headers["Access-Control-Allow-Methods"] = "GET,POST,DELETE,OPTIONS"
         return response
 
-    @app.route("/api/<path:_>", methods=["OPTIONS"])
+    @app.route("/<path:_>", methods=["OPTIONS"])
     def options(_):
         return "", 204
 
-    @app.post("/api/video/info")
+    @app.post("/video/info")
     @rate_limit(20, 60)
     def video_info():
         try:
@@ -48,7 +48,7 @@ def create_app() -> Flask:
                 502,
             )
 
-    @app.post("/api/download/prepare")
+    @app.post("/download/prepare")
     @rate_limit(30, 60)
     def prepare_download():
         payload = request.get_json(silent=True) or {}
@@ -69,7 +69,7 @@ def create_app() -> Flask:
                 502,
             )
 
-    @app.post("/api/download/server")
+    @app.post("/download/server")
     @rate_limit(10, 60)
     def server_download():
         payload = request.get_json(silent=True) or {}
@@ -84,7 +84,7 @@ def create_app() -> Flask:
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
 
-    @app.get("/api/download/status/<task_id>")
+    @app.get("/download/status/<task_id>")
     def download_status(task_id: str):
         status = get_status(task_id)
         return (
@@ -93,7 +93,7 @@ def create_app() -> Flask:
             else (jsonify({"error": "Download not found."}), 404)
         )
 
-    @app.get("/api/download/file/<task_id>")
+    @app.get("/download/file/<task_id>")
     def download_file(task_id: str):
         result = get_file(task_id)
         if not result:
@@ -101,7 +101,7 @@ def create_app() -> Flask:
         path, filename = result
         return send_file(path, as_attachment=True, download_name=filename, max_age=0)
 
-    @app.delete("/api/download/<task_id>")
+    @app.delete("/download/<task_id>")
     def delete_download(task_id: str):
         cleanup(task_id)
         return jsonify({"ok": True})
