@@ -18,7 +18,8 @@ from backend.app.utils.validation import validate_youtube_url
 TMP_ROOT = Path(tempfile.gettempdir()) / "yt-video-downloader"
 TMP_ROOT.mkdir(parents=True, exist_ok=True)
 TASK_TTL_SECONDS = int(os.getenv("DOWNLOAD_TASK_TTL_SECONDS", str(24 * 60 * 60)))
-REDIS_URL = os.getenv("REDIS_URL")
+REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 
 
 class JobTracker(Protocol):
@@ -31,40 +32,13 @@ class JobTracker(Protocol):
     def delete(self, task_id: str) -> None: ...
 
 
-class InMemoryJobTracker:
-    def __init__(self) -> None:
-        self._tasks: dict[str, dict[str, Any]] = {}
-        self._lock = threading.Lock()
-
-    def create(self, task_id: str, task: dict[str, Any]) -> None:
-        with self._lock:
-            self._tasks[task_id] = task.copy()
-
-    def get(self, task_id: str) -> dict[str, Any] | None:
-        with self._lock:
-            task = self._tasks.get(task_id)
-            return task.copy() if task else None
-
-    def update(self, task_id: str, values: dict[str, Any]) -> None:
-        with self._lock:
-            if task_id in self._tasks:
-                self._tasks[task_id].update(values)
-
-    def delete(self, task_id: str) -> None:
-        with self._lock:
-            self._tasks.pop(task_id, None)
-
-
 class RedisJobTracker:
-    def __init__(self, redis_url: str, ttl_seconds: int) -> None:
-        from redis import Redis
+    def __init__(self, host: str, port: int, ttl_seconds: int) -> None:
+        from redis import Redis, WatchError
 
-        self._client = Redis.from_url(redis_url, decode_responses=True)
-        from redis import WatchError
-
+        self._client = Redis(host=host, port=port, decode_responses=True)
         self._ttl_seconds = ttl_seconds
         self._watch_error = WatchError
-        self._client.ping()
 
     @staticmethod
     def _key(task_id: str) -> str:
@@ -105,9 +79,7 @@ class RedisJobTracker:
 
 
 def _build_tracker() -> JobTracker:
-    if REDIS_URL:
-        return RedisJobTracker(REDIS_URL, TASK_TTL_SECONDS)
-    return InMemoryJobTracker()
+    return RedisJobTracker(REDIS_HOST, REDIS_PORT, TASK_TTL_SECONDS)
 
 
 TRACKER = _build_tracker()
